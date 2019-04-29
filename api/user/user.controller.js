@@ -1,80 +1,71 @@
-var fs = require("fs");
-function readUsers(callback){
-  fs.readFile( __dirname + "/../data/users.json", 'utf8', function(err, data){
-    console.log(data);
+const fs = require("fs");
+const USERDATA_PATH = __dirname + "/../../data/users.json";
+const readUsers = function(callback){
+  fs.readFile( USERDATA_PATH, 'utf8', (err, data) => {
     callback(err, data);
   });
-}
+};
 
-module.exports = function(app){
-  app.get('/', function(req, res){
-    res.render('index', {
-      title: "MY HOME",
-      length: 5
+module.exports = {
+  list(req, res){
+    readUsers((err, data) => {
+      const users = JSON.parse(data);
+      res.json(users);
     });
-  });
-  app.get('/users', function(req, res){
-    readUsers(function(err, data){
-      console.log( data );
-      res.end( data );
-    });
-  });
-  app.post('/users', function(req, res){
-    var result = {};
-    var name = req.body["name"];
-    var password = req.body["password"];
+  },
+  create(req, res){
+    const name = req.body["name"];
+    const password = req.body["password"];
 
     if (!name || !password) {
-      result["success"] = 0;
-      result["error"] = "invalid request";
-      res.json(result);
-      return;
+      return res.status(400).json({error: 'invalid data'});
     }
 
-    readUsers(function(err, data){
-      var new_id;
-      var users = JSON.parse(data);
-      var duplicated = function(o){
+    readUsers((err, data) => {
+      let new_id;
+      let newUser;
+      const users = JSON.parse(data);
+      const duplicated = (o) => {
         if (!o.name) return false;
         return o.name === name;
       }
 
       // if name is duplicated, return error
       if (users.some(duplicated)) {
-        result["success"] = 0;
-        result["error"] = "duplicated";
-        res.json(result);
-        return;
+        return res.status(400).json({error: 'duplicated'});
       }
 
       // Generate new id
-      new_id = users[users.length-1].id + 1;
+      new_id = users.reduce((max, user) => {
+        return user.id > max ? user.id : max;
+      }, 0) + 1;
       console.log( new_id );
 
       // Add data to users object
-      users.push({
+      newUser = {
         id: new_id,
         name: name,
         pasword: password
-      });
+      }
 
-      fs.writeFile(__dirname + "/../data/users.json",
-        JSON.stringify(users, null, '\t'), "utf8", function(err, data){
-          result = {"success": 1};
-          res.json(result);
+      users.push(newUser);
+
+      fs.writeFile(USERDATA_PATH,
+        JSON.stringify(users, null, '\t'), "utf8", (err, data) => {
+          res.json(newUser);
         }
       );
     });
-  });
-  app.get('/users/:id', function(req, res){
-    readUsers(function(err, data){
-      var users = JSON.parse(data);
-      var req_id = Number(req.params.id);
-      var user = users.filter(function(o){
-        if (!o.id) return false;
-        return o.id === req_id;
-      });
+  },
+  retrieve(req, res){
+    readUsers((err, data) => {
+      const users = JSON.parse(data);
+      const req_id = Number(req.params.id);
+      const user = users.filter(u => u.id === req_id)[0];
+      if (!req_id || !user) {
+        return res.status(404).json({error: 'invalid id'});
+      }
       res.json(user);
     });
-  });
+  }
 }
