@@ -1,0 +1,25 @@
+{
+  "name": "node-board",
+  "version": "0.0.1",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/twins1040/nodeBoard.git"
+  },
+  "author": "wook",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/twins1040/nodeBoard/issues"
+  },
+  "homepage": "https://github.com/twins1040/nodeBoard#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "ejs": "^2.6.1",
+    "express": "^4.16.4",
+    "express-session": "^1.16.1"
+  }
+}
