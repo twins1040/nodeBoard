@@ -7,8 +7,24 @@ const User = sequelize.define('user', {
   name: Sequelize.STRING,
   password: Sequelize.STRING
 });
+const Post = sequelize.define('post', {
+  title: Sequelize.STRING,
+  description: Sequelize.STRING
+});
+const Comment = sequelize.define('comment', {
+  comment: Sequelize.STRING,
+});
+
+User.hasMany(Post);
+User.hasMany(Comment);
+Post.hasMany(Comment);
+Post.belongsTo(User);
+Comment.belongsTo(User);
+Comment.belongsTo(Post);
 
 module.exports = {
-  sequelize: sequelize,
-  User: User
+  sequelize,
+  User,
+  Post,
+  Comment
 }
