@@ -46,5 +46,47 @@ module.exports = {
       const message = err.message ? err.message : 'Bad request';
       return res.status(err.status).json({error: err.message});
     });
+  },
+  posts(req,res){
+    const pk = Number(req.params.id);
+    return new Promise((resolve, reject) => {
+      if (!pk) throw {status:404, message: 'Id should be number'};
+      resolve(pk);
+    }).then(pk => {
+      return models.User.findByPk(pk);
+    }).then(user => {
+      if (!user) throw {status:404, message: 'Invalid id'};
+      return models.Post.findAll({
+        where: {
+          userId: pk
+        }});
+    }).then(posts => {
+      return res.json(posts);
+    }).catch(err => {
+      const status = err.status ? err.status : 400;
+      const message = err.message ? err.message : 'Bad request';
+      return res.status(err.status).json({error: err.message});
+    });
+  },
+  comments(req,res){
+    const pk = Number(req.params.id);
+    return new Promise((resolve, reject) => {
+      if (!pk) throw {status:404, message: 'Id should be number'};
+      resolve(pk);
+    }).then(pk => {
+      return models.User.findByPk(pk);
+    }).then(user => {
+      if (!user) throw {status:404, message: 'Invalid id'};
+      return models.Comment.findAll({
+        where: {
+          userId: pk
+        }});
+    }).then(comments => {
+      return res.json(comments);
+    }).catch(err => {
+      const status = err.status ? err.status : 400;
+      const message = err.message ? err.message : 'Bad request';
+      return res.status(err.status).json({error: err.message});
+    });
   }
 }

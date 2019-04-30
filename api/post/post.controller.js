@@ -74,5 +74,26 @@ module.exports = {
     }).then(() => {
       return res.status(204).send();
     }).catch(err => errFn(err, res));
+  },
+  comments(req,res){
+    const pk = Number(req.params.id);
+    return new Promise((resolve, reject) => {
+      if (!pk) throw {status:404, message: 'Id should be number'};
+      resolve(pk);
+    }).then(pk => {
+      return models.Post.findByPk(pk);
+    }).then(post => {
+      if (!post) throw {status:404, message: 'Invalid Post'};
+      return models.Comment.findAll({
+        where: {
+          postId: pk
+        }});
+    }).then(comments => {
+      return res.json(comments);
+    }).catch(err => {
+      const status = err.status ? err.status : 400;
+      const message = err.message ? err.message : 'Bad request';
+      return res.status(err.status).json({error: err.message});
+    });
   }
 }
