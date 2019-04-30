@@ -1,0 +1,103 @@
+<html>
+  <head>
+    <script src="https://unpkg.com/vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+      table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+      }
+
+      tr:nth-child(even) {
+        background-color: #dddddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <data-table title="users" :data="users" :form="form.users"></data-table>
+      <data-table title="posts" :data="posts" :form="form.posts"></data-table>
+      <data-table title="comments" :data="comments" :form="form.comments"></data-table>
+    </div>
+    <script>
+      const dataTable = Vue.component('data-table', {
+        props: ['title', 'data', 'form'],
+        data(){
+          return {
+            error: ""
+          };
+        },
+        methods: {
+          create(){
+            axios.post('/'+this.title, this.form).then(() => {
+              location.href = 'index.html'
+            }).catch(err => this.error = JSON.stringify(err.response.data));
+          }
+        },
+        template: `
+        <div>
+          <h1>{{ title }}</h1>
+          <table>
+            <template v-for="(record, index) in data">
+              <tr v-if="index === 0">
+                <th v-for="(vaule, key) in record">{{key}}</th>
+              </tr>
+              <tr>
+                <th v-for="value in record">{{value}}</th>
+              </tr>
+            </template>
+          </table>
+          <div>
+            <template v-for="(val, key)  in form">
+              <label :for="key">{{key}}:</label>
+              <input type="text" :id="key" v-model="form[key]" />
+            </template>
+            <button @click="create()"> Create </button>
+            <div>{{ error }}</div>
+          </div>
+        </div>
+        `
+      });
+      new Vue({
+        el: '#app',
+        components: {
+          dataTable
+        },
+        data: {
+          users: [],
+          posts: [],
+          comments: [],
+          form: {
+            users: {
+              name: "",
+              password: ""
+            },
+            posts: {
+              title: "",
+              description: "",
+              userId: "",
+            },
+            comments: {
+              comment: "",
+              userId: "",
+              postId: "",
+            }
+          },
+        },
+        mounted(){
+          axios.defaults.baseURL = 'http://localhost:3000';
+          axios.get('/users').then(res => this.users = res.data);
+          axios.get('/posts').then(res => this.posts = res.data);
+          axios.get('/comments').then(res => this.comments = res.data);
+        }
+      })
+    </script>
+  </body>
+</html>
