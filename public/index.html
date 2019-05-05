@@ -22,74 +22,119 @@
   </head>
   <body>
     <div id="app">
-      <data-table title="users" :data="users" :form="form.users"></data-table>
-      <data-table title="posts" :data="posts" :form="form.posts"></data-table>
-      <data-table title="comments" :data="comments" :form="form.comments"></data-table>
-    </div>
-    <script>
-      const dataTable = Vue.component('data-table', {
-        props: ['title', 'data', 'form'],
-        data(){
-          return {
-            error: ""
-          };
-        },
-        methods: {
-          create(){
-            axios.post('/'+this.title, this.form).then(() => {
-              location.href = 'index.html'
-            }).catch(err => this.error = JSON.stringify(err.response.data));
-          }
-        },
-        template: `
-        <div>
-          <h1>{{ title }}</h1>
-          <table>
-            <template v-for="(record, index) in data">
-              <tr v-if="index === 0">
-                <th v-for="(vaule, key) in record">{{key}}</th>
-              </tr>
-              <tr>
-                <th v-for="value in record">{{value}}</th>
-              </tr>
-            </template>
-          </table>
+      <div>{{ error }}</div>
+      <div id="usersData">
+        <h1> Users </h1>
+        <table>
+          <tr>
+            <th v-for="(vaule, key) in users[0]">{{key}}</th>
+          </tr>
+          <tr v-for="(record, index) in users">
+            <th v-for="value in record">{{value}}</th>
+          </tr>
+        </table>
+        <div class="form">
+          name: <input type="text" v-model="form.users.name" />
+          password: <input type="text" v-model="form.users.password" />
+          <button @click="create('/users', form.users)"> Create </button>
+        </div>
+      </div>
+      <div id="postData">
+        <h1> Posts </h1>
+        <table>
+          <tr>
+            <th v-for="(vaule, key) in posts.data[0]" v-if="key !== 'description'">{{key}}</th>
+          </tr>
+          <tr v-for="post in posts.data" @click="form.comments.postId = post.id; getDetail(post)">
+            <th v-for="(value, key) in post" v-if="key !== 'description'"><a href="#">{{value}}</a></th>
+          </tr>
+        </table>
+        <a v-for="page in posts.pages" href="#" @click="getPage(page.url)">{{page.number}} </a>
+        <div class="form">
           <div>
-            <template v-for="(val, key)  in form">
-              <label :for="key">{{key}}:</label>
-              <input type="text" :id="key" v-model="form[key]" />
-            </template>
-            <button @click="create()"> Create </button>
-            <div>{{ error }}</div>
+            title: <input type="text" v-model="form.posts.title" />
+            user id: <input type="text" v-model="form.posts.userId" />
+          </div>
+          <div>
+            description: <textarea style="width:100%" v-model="form.posts.description"></textarea>
+          </div>
+          <button @click="create('/posts', form.posts)"> Create </button>
+        </div>
+        <div id="detail">
+          <h1> Post Detail </h1>
+          <table>
+            <tr><th>id</th><th>{{detail.id}}</th><th>author</th><th>{{detail.userId}}</th></tr>
+          </table>
+          <h2>{{detail.title}}</h2>
+          {{ detail.description }}
+          <div id="commentData">
+            <h3> Comments </h3>
+            <table>
+              <tr>
+                <th v-for="(vaule, key) in detail.comments[0]">{{key}}</th>
+              </tr>
+              <tr v-for="comment in detail.comments">
+                <th v-for="value in comment">{{value}}</th>
+              </tr>
+            </table>
+            <div class="form">
+              user id: <input type="text" v-model="form.comments.userId" />
+              comment: <input type="text" v-model="form.comments.comment" />
+              <button @click="create('/comments', form.comments)"> Create </button>
+            </div>
           </div>
         </div>
-        `
-      });
+      </div>
+    </div>
+    <script>
       new Vue({
         el: '#app',
-        components: {
-          dataTable
-        },
         data: {
-          users: [],
-          posts: [],
-          comments: [],
+          error: "",
+          users: {data:[{}]},
+          posts: {data:[{}]},
+          comments: {data:[{}]},
           form: {
-            users: {
-              name: "",
-              password: ""
-            },
-            posts: {
-              title: "",
-              description: "",
-              userId: "",
-            },
-            comments: {
-              comment: "",
-              userId: "",
-              postId: "",
-            }
+            users:{},
+            posts: {},
+            comments: {}
           },
+          detail:{
+            id: 0,
+            userId: 0,
+            title: "",
+            description: "",
+            comments: []
+          }
+        },
+        methods: {
+          getPostComments(id){
+            axios.get('/posts/'+id+'/comments').then(res => {
+              this.detail.comments = res.data;
+            }).catch(err => this.error = JSON.stringify(err.response.data));
+          },
+          create(url, json){
+            axios.post(url, json).then(() => {
+              return axios.get(url).then(res => {
+                if (url === '/comments') this.getPostComments(this.detail.id);
+                // '/users' => 'users'
+                this[url.slice(1)] = res.data;
+              });
+            }).catch(err => this.error = JSON.stringify(err.response.data));
+          },
+          getDetail(post){
+            const id = post.id;
+
+            this.detail['title'] = post.title;
+            this.detail['description'] = post.description;
+            this.detail['id'] = post.id;
+            this.detail['userId'] = post.userId;
+
+            this.getPostComments(id);
+          },
+          getPage(url){
+            axios.get(url).then(res => this.posts = res.data);
+          }
         },
         mounted(){
           axios.defaults.baseURL = 'http://localhost:3000';

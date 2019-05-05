@@ -1,8 +1,5 @@
 const Sequelize = require('sequelize');
-const sequelize = new Sequelize('node_board_api', 'wook', 'wook', {
-  host: 'localhost',
-  dialect: 'mysql'
-});
+const sequelize = new Sequelize('sqlite:./board.db');
 const User = sequelize.define('user', {
   name: Sequelize.STRING,
   password: Sequelize.STRING

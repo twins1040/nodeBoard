@@ -1,4 +1,6 @@
 const models = require('../../models');
+const paginate = require('express-paginate');
+
 const errFn = (err, res) => {
   const status = err.status ? err.status : 400;
   const message = err.message ? err.message : 'Bad request';
@@ -7,8 +9,18 @@ const errFn = (err, res) => {
 
 
 module.exports = {
-  list(req, res){
-    models.Post.findAll().then(posts => res.json(posts));
+  list(req, res, next){
+    models.Post.findAndCountAll({limit: req.query.limit, offset: req.skip})
+      .then(results => {
+        const itemCount = results.count;
+        const pageCount = Math.ceil(results.count / req.query.limit);
+        return res.json({
+          data: results.rows,
+          pageCount,
+          itemCount,
+          pages: paginate.getArrayPages(req)(3, pageCount, req.query.page)
+        });
+    }).catch(err => next(err))
   },
   create(req, res){
     const title = req.body["title"];
