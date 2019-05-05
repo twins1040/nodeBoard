@@ -6,11 +6,22 @@ const errFn = (err, res) => {
   const message = err.message ? err.message : 'Bad request';
   return res.status(status).json({error: message});
 };
-
+const findPostByPk = pk => {
+  return new Promise((resolve, reject) => {
+    const _pk = Number(pk);
+    if (!_pk) throw {status:403, message: 'Id should be number'};
+    resolve(_pk);
+  }).then(pk => {
+    return models.Post.findByPk(pk);
+  }).then(post => {
+    if (!post) throw {status:404, message: 'Invalid id'};
+    return post;
+  });
+};
 
 module.exports = {
   list(req, res, next){
-    models.Post.findAndCountAll({limit: req.query.limit, offset: req.skip})
+    return models.Post.findAndCountAll({limit: req.query.limit, offset: req.skip})
       .then(results => {
         const itemCount = results.count;
         const pageCount = Math.ceil(results.count / req.query.limit);
@@ -27,17 +38,16 @@ module.exports = {
     const description = req.body["description"];
     const userId = Number(req.body["userId"]);
 
-    if (!title || !description || !userId) {
-      return res.status(400).json({error: 'invalid data'});
-    }
-
-    return models.User.findByPk(userId).then(user => {
-      if (!user) throw {status:404, message: 'User not found'};
-      return models.Post.create({
-        title,
-        description,
-        userId
-      });
+    return new Promise((resolve, reject) => {
+      if (!title || !description || !userId){
+        throw {status:400, message: 'Invalid data'};
+      }
+      resolve();
+    }).then(() =>{
+      return models.User.findByPk(userId);
+    }).then(user => {
+        if (!user) throw {status:404, message: 'User not found'};
+        return models.Post.create({ title, description, userId });
     }).then(post => {
       return res.status(201).json(post);
     }).catch(err => errFn(err, res));
@@ -49,63 +59,41 @@ module.exports = {
     const description = req.body["description"];
     const udata = {};
 
-    if (!id) {
-      return res.status(404).json({error: 'Post not found'});
-    }
-
     udata["id"] = id;
     if (userId) udata["userId"] = userId;
     if (title) udata["title"] = title;
     if (description) udata["description"] = description;
 
-    // update only return count of update, 1
-    return models.Post.update(udata, {
-      where: {id}
+    return new Promise((resolve, reject) => {
+      if (!id || !userId ) throw {status:400, message: 'Invalid data'};
+      resolve();
+    }).then(() =>{
+      return findPostByPk(id);
+    }).then(post =>{
+      if (post.userId !== userId) throw {status:401, message: 'Unauthorized'};
+      return models.Post.update(udata, { where: {id} });
     }).then(() => {
+      // update only return count of update, 1
       return res.status(201).end();
     }).catch(err => errFn(err, res));
   },
   retrieve(req, res){
-    const id = Number(req.params.id);
-
-    // ex) 0, NaN ...
-    if (!id) return res.status(400).json({error: 'invalid data'});
-
-    return models.Post.findByPk(id).then(post => {
-      if (!post) throw {status:404, message: 'User not found'};
+    return findPostByPk(req.params.id).then(post => {
       return res.json(post);
     }).catch(err => errFn(err, res));
   },
   delete(req, res){
-    const id = Number(req.params.id);
-    if (!id) {
-      return res.status(404).json({error: 'Post not found'});
-    }
-    return models.Post.destroy({
-      where: {id}
+    return findPostByPk(req.params.id).then(post => {
+      return models.Post.destroy({ where: {id: post.id} });
     }).then(() => {
       return res.status(204).send();
     }).catch(err => errFn(err, res));
   },
   comments(req,res){
-    const pk = Number(req.params.id);
-    return new Promise((resolve, reject) => {
-      if (!pk) throw {status:404, message: 'Id should be number'};
-      resolve(pk);
-    }).then(pk => {
-      return models.Post.findByPk(pk);
-    }).then(post => {
-      if (!post) throw {status:404, message: 'Invalid Post'};
-      return models.Comment.findAll({
-        where: {
-          postId: pk
-        }});
+    return findPostByPk(req.params.id).then(post => {
+      return models.Comment.findAll({ where: { postId: post.id }});
     }).then(comments => {
       return res.json(comments);
-    }).catch(err => {
-      const status = err.status ? err.status : 400;
-      const message = err.message ? err.message : 'Bad request';
-      return res.status(err.status).json({error: err.message});
-    });
+    }).catch(err => errFn(err, res));
   }
 }
