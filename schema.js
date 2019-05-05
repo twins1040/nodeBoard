@@ -8,6 +8,7 @@ module.exports = buildSchema(`
     createdAt: String!
     updatedAt: String!
     posts: [Post]
+    comments: [Comment]
   }
   type Post {
     id: ID!
